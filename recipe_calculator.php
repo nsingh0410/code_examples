@@ -39,39 +39,89 @@
 
 			fclose($handle);
 			$recipes = json_decode($json_recipes);
-
-
-			$used_by = date('d/m/Y');
-			// loop through all the recipe ingredients and unset the ingredients in the fridge list.
-			foreach ($recipes as &$recipe) {
-				foreach ($recipe->ingredients as $key => $recipe_ingredient) {
-					foreach ($fridge_items as $items => $fridge_ingredient) {
-						if ($fridge_ingredient['item'] === $recipe_ingredient->item && $fridge_ingredient['unit'] === $recipe_ingredient->unit) {
-							if ($fridge_ingredient['item'] >= $recipe_ingredient->amount) {
-								if (isset($recipe_ingredient->item)) {
-									unset($recipe->ingredients[$key]);
-								}
-							}
-						} 
-					}
-				}
-				if (empty($recipe->ingredients) === TRUE) {
-					echo $recipe->name;
-				}
-			}//end loop recipes
+			find_ingredients($recipes, $fridge_items);
+			print_recipe($recipes);
 			
-
-			//foreach ($recipes->ingredients as $key => $recipe_ingredient) {
-				
-			//}
-
 			} else {
 				echo 'No CSV list';
 			}
 			
-
 		}//end submit 
 
+
+function closest_used_by(&$recipe, $fridge_ingredient_date)
+{
+
+	$used_by = date('d/m/Y');
+
+	if (isset($recipe->date) === FALSE) {
+		$recipe->date = $fridge_ingredient_date;
+	} else {
+		$prev_date_diff = abs($recipe->date - $used_by);
+		$new_date_diff = abs(strtotime($fridge_ingredient_date) - strtotime($used_by));
+		
+		if ($new_date_diff < $prev_date_diff) {
+			$recipe->date = $fridge_ingredient_date;
+		}
+	}
+
+}
+
+function find_ingredients(&$recipes, $fridge_items)
+{
+	// loop through all the recipe ingredients and unset the ingredients in the fridge list.
+	foreach ($recipes as &$recipe) {
+		foreach ($recipe->ingredients as $key => $recipe_ingredient) {
+			foreach ($fridge_items as $items => $fridge_ingredient) {
+				if ($fridge_ingredient['item'] === $recipe_ingredient->item && $fridge_ingredient['unit'] === $recipe_ingredient->unit) {
+					if (isset($fridge_ingredient['date'])) {
+
+						// add the 
+						closest_used_by($recipe, $fridge_ingredient['date']); 
+					}	
+					if ($fridge_ingredient['item'] >= $recipe_ingredient->amount) {
+						if (isset($recipe_ingredient->item)) {
+							unset($recipe->ingredients[$key]);
+						}
+					}
+				} 
+			}
+		}
+	}//end loop recipes
+}//end find_ingredients()
+
+function print_recipe($recipes)
+{
+	// print the recipe closest to used by date
+	$prev_date = '';
+	$used_by = date('d/m/Y');
+	$closest = FALSE; 
+
+	foreach ($recipes as &$recipe) {
+		if (empty($recipe->ingredients) === TRUE) {
+			$matched = Array();
+			
+		$prev_date_diff = abs($prev_date - $used_by);
+		$new_date_diff = abs($recipe->date - $used_by);
+			
+			if ($new_date_diff < $prev_date_diff) {
+				$matched[$recipe->name] = $recipe->date;
+			} else {
+				$matched[$recipe->name] = $prev_date;
+			}
+			$prev_date = $recipe->date;
+		}
+	}//end loop recipes
+	
+	echo key($matched);
+	
+}//end print_recipe()
+
+
+
+
+
+ 	
 		
 
 		
